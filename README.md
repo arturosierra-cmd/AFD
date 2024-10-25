@@ -5,7 +5,7 @@ Este proyecto implementa un Autómata Finito Determinista (AFD) que puede ser ca
 ## Cómo ejecutar
 
 1. Instala Python 3.
-2. Ejecuta `python main.py` y sigue las instrucciones.
+2. Ejecuta `python3 main.py` y sigue las instrucciones.
 
 ## Estructura
 
