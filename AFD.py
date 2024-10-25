@@ -1,3 +1,5 @@
+import xml.etree.ElementTree as ET
+
 class ErrorAutomata(Exception):
     """Clase para manejar errores personalizados del autómata."""
     pass
@@ -11,28 +13,36 @@ class AFD:
         self.final_states = set()
         self.transitions = {}
         self.valid_symbols = set('abcdefghijklmnopqrstuvwxyz0123456789')
-        self._cargar_automata(filename)
+        self._cargar_automata_xml(filename)  # Cambiamos para cargar archivo XML
 
-    def _cargar_automata(self, filename):
-        """Carga el autómata desde un archivo de texto plano."""
+    def _cargar_automata_xml(self, filename):
+        """Carga el autómata desde un archivo XML."""
         try:
-            with open(filename, 'r') as file:
-                lines = file.readlines()
-                for line in lines:
-                    line = line.strip()
-                    if line.startswith('ESTADO_INICIAL'):
-                        # Estado inicial está definido como: ESTADO_INICIAL=n
-                        self.initial_state = self._validar_estado(line.split('=')[1])
-                    elif line.startswith('ESTADOS_FINALES'):
-                        # Estados finales: ESTADOS_FINALES=1,2
-                        finales = line.split('=')[1].split(',')
-                        self.final_states.update(self._validar_estado(f) for f in finales)
-                    elif ',' in line:
-                        # Transiciones codificadas como: n,a,m
-                        self._cargar_transicion(line)
-                    else:
-                        raise ErrorAutomata(f"Línea inválida en el archivo del autómata: {line}")
+            tree = ET.parse(filename)
+            root = tree.getroot()
 
+            # Cargar alfabeto
+            for symbol in root.find('ALFABETO'):
+                self._validar_simbolo(symbol.text)
+                self.alphabet.add(symbol.text)
+
+            # Cargar estados
+            for state in root.find('ESTADO'):
+                self.states.add(self._validar_estado(state.text))
+
+            # Cargar estado inicial
+            self.initial_state = self._validar_estado(root.find('INICIAL').text)
+
+            # Cargar estados finales
+            for final in root.find('FINAL'):
+                self.final_states.add(self._validar_estado(final.text))
+
+            # Cargar transiciones
+            for transition in root.find('TRANSICIONES'):
+                self._cargar_transicion(transition.text)
+
+        except ET.ParseError:
+            raise ErrorAutomata("Error al procesar el archivo XML")
         except Exception as e:
             raise ErrorAutomata(f"Error cargando el autómata: {str(e)}")
 
@@ -48,18 +58,16 @@ class AFD:
             raise ErrorAutomata(f"Estado inválido: {state}")
         return int(state)
 
-    def _cargar_transicion(self, transicion_str):
-        """Carga una transición desde una línea de texto."""
-        n, a, m = transicion_str.split(',')
+    def _cargar_transicion(self, transition_str):
+        """Carga una transición desde una línea en el archivo XML."""
+        n, a, m = transition_str.split(',')
         n, m = self._validar_estado(n), self._validar_estado(m)
         a = self._validar_simbolo(a)
 
-        # Verificar si ya existe una transición con el mismo símbolo desde el estado n
         if (n, a) in self.transitions:
-            raise ErrorAutomata(f"Transiciones múltiples detectadas para el estado {n} con el símbolo {a}")
+            raise ErrorAutomata(f"Transición duplicada para el estado {n} con el símbolo {a}")
         self.transitions[(n, a)] = m
         self.states.update([n, m])
-        self.alphabet.add(a)
 
     def validar_cadena(self, cadena_entrada):
         """Valida si una cadena es aceptada por el autómata."""
