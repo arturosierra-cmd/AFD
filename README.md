@@ -14,6 +14,6 @@ Este proyecto implementa un Autómata Finito Determinista (AFD) que puede ser ca
 - `automata.xml`: Definición del autómata en formato XML.
 
 
-# DISE;O - IMPLEMENTACION - DESARROLLO
-## GILBERTO ARTURO SIERRA RAX 
-# 0902-16-7372
+# Propiedad de:
+GILBERTO ARTURO SIERRA RAX 
+UMG - 0902-16-7372
