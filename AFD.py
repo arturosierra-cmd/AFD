@@ -1,19 +1,19 @@
 import xml.etree.ElementTree as ET
 
 class ErrorAutomata(Exception):
-    """Clase para manejar errores personalizados del autómata."""
+    """Clase para manejar errores del autómata."""
     pass
 
 class AFD:
     def __init__(self, filename):
-        """Inicializa el AFD con los elementos principales."""
+        """Inicializa el AFD con los elementos del archivo XML."""
         self.states = set()
         self.alphabet = set()
         self.initial_state = None
         self.final_states = set()
         self.transitions = {}
         self.valid_symbols = set('abcdefghijklmnopqrstuvwxyz0123456789')
-        self._cargar_automata_xml(filename)  # Cambiamos para cargar archivo XML
+        self._cargar_automata_xml(filename)
 
     def _cargar_automata_xml(self, filename):
         """Carga el autómata desde un archivo XML."""
@@ -47,7 +47,7 @@ class AFD:
             raise ErrorAutomata(f"Error cargando el autómata: {str(e)}")
 
     def _validar_simbolo(self, symbol):
-        """Valida que el símbolo pertenezca al alfabeto válido [a-z0-9]."""
+        """Valida que el símbolo pertenezca al alfabeto [a-z0-9]."""
         if symbol not in self.valid_symbols:
             raise ErrorAutomata(f"Símbolo inválido en el alfabeto: {symbol}")
         return symbol
@@ -59,11 +59,12 @@ class AFD:
         return int(state)
 
     def _cargar_transicion(self, transition_str):
-        """Carga una transición desde una línea en el archivo XML."""
+        """Carga una transición desde una línea."""
         n, a, m = transition_str.split(',')
         n, m = self._validar_estado(n), self._validar_estado(m)
         a = self._validar_simbolo(a)
 
+        # Verificar si ya existe una transición con el mismo símbolo desde el estado n
         if (n, a) in self.transitions:
             raise ErrorAutomata(f"Transición duplicada para el estado {n} con el símbolo {a}")
         self.transitions[(n, a)] = m
@@ -76,17 +77,13 @@ class AFD:
 
         for simbolo in cadena_entrada:
             if simbolo not in self.alphabet:
-                print(f"Error: el símbolo '{simbolo}' no está en el alfabeto")
-                return False
+                return f"Error: el símbolo '{simbolo}' no está en el alfabeto"
             if (estado_actual, simbolo) not in self.transitions:
-                print(f"Error: no existe transición para el símbolo '{simbolo}' desde el estado {estado_actual}")
-                return False
+                return f"Error: no existe transición para el símbolo '{simbolo}' desde el estado {estado_actual}"
             estado_actual = self.transitions[(estado_actual, simbolo)]
             trazabilidad.append(estado_actual)
 
         if estado_actual in self.final_states:
-            print(f"Cadena aceptada. Trazabilidad: {trazabilidad}")
-            return True
+            return f"Cadena aceptada. Trazabilidad: {trazabilidad}"
         else:
-            print(f"Cadena rechazada. Trazabilidad: {trazabilidad}")
-            return False
+            return f"Cadena rechazada. Trazabilidad: {trazabilidad}"
