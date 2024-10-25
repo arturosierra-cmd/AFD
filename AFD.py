@@ -1,6 +1,4 @@
-import xml.etree.ElementTree as ET
-
-class AutomatonError(Exception):
+class ErrorAutomata(Exception):
     """Clase para manejar errores personalizados del autómata."""
     pass
 
@@ -12,79 +10,75 @@ class AFD:
         self.initial_state = None
         self.final_states = set()
         self.transitions = {}
-        self._load_automaton(filename)
+        self.valid_symbols = set('abcdefghijklmnopqrstuvwxyz0123456789')
+        self._cargar_automata(filename)
 
-    def _load_automaton(self, filename):
-        """Carga el autómata desde un archivo XML."""
+    def _cargar_automata(self, filename):
+        """Carga el autómata desde un archivo de texto plano."""
         try:
-            tree = ET.parse(filename)
-            root = tree.getroot()
+            with open(filename, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('ESTADO_INICIAL'):
+                        # Estado inicial está definido como: ESTADO_INICIAL=n
+                        self.initial_state = self._validar_estado(line.split('=')[1])
+                    elif line.startswith('ESTADOS_FINALES'):
+                        # Estados finales: ESTADOS_FINALES=1,2
+                        finales = line.split('=')[1].split(',')
+                        self.final_states.update(self._validar_estado(f) for f in finales)
+                    elif ',' in line:
+                        # Transiciones codificadas como: n,a,m
+                        self._cargar_transicion(line)
+                    else:
+                        raise ErrorAutomata(f"Línea inválida en el archivo del autómata: {line}")
 
-            # Cargar alfabeto
-            for symbol in root.find('ALFABETO'):
-                self._validate_symbol(symbol.text)
-                self.alphabet.add(symbol.text)
-
-            # Cargar estados
-            for state in root.find('ESTADO'):
-                self.states.add(self._validate_state(state.text))
-
-            # Cargar estado inicial
-            self.initial_state = self._validate_state(root.find('INICIAL').text)
-
-            # Cargar estados finales
-            for final in root.find('FINAL'):
-                self.final_states.add(self._validate_state(final.text))
-
-            # Cargar transiciones
-            for transition in root.find('TRANSICIONES'):
-                self._load_transition(transition.text)
-
-        except ET.ParseError:
-            raise AutomatonError("Error parsing the XML file")
         except Exception as e:
-            raise AutomatonError(f"Error loading automaton: {str(e)}")
+            raise ErrorAutomata(f"Error cargando el autómata: {str(e)}")
 
-    def _validate_symbol(self, symbol):
-        """Valida los símbolos del alfabeto."""
-        if not symbol.isalnum():
-            raise AutomatonError(f"Invalid symbol in alphabet: {symbol}")
+    def _validar_simbolo(self, symbol):
+        """Valida que el símbolo pertenezca al alfabeto válido [a-z0-9]."""
+        if symbol not in self.valid_symbols:
+            raise ErrorAutomata(f"Símbolo inválido en el alfabeto: {symbol}")
         return symbol
 
-    def _validate_state(self, state):
+    def _validar_estado(self, state):
         """Valida que los estados sean números enteros."""
         if not state.isdigit():
-            raise AutomatonError(f"Invalid state: {state}")
+            raise ErrorAutomata(f"Estado inválido: {state}")
         return int(state)
 
-    def _load_transition(self, transition_str):
-        """Carga una transición desde una cadena."""
-        n, a, m = transition_str.split(',')
-        n, m = self._validate_state(n), self._validate_state(m)
-        a = self._validate_symbol(a)
+    def _cargar_transicion(self, transicion_str):
+        """Carga una transición desde una línea de texto."""
+        n, a, m = transicion_str.split(',')
+        n, m = self._validar_estado(n), self._validar_estado(m)
+        a = self._validar_simbolo(a)
 
+        # Verificar si ya existe una transición con el mismo símbolo desde el estado n
         if (n, a) in self.transitions:
-            raise AutomatonError(f"Multiple transitions detected for state {n} with symbol {a}")
+            raise ErrorAutomata(f"Transiciones múltiples detectadas para el estado {n} con el símbolo {a}")
         self.transitions[(n, a)] = m
+        self.states.update([n, m])
+        self.alphabet.add(a)
 
-    def validate_string(self, input_string):
+    def validar_cadena(self, cadena_entrada):
         """Valida si una cadena es aceptada por el autómata."""
-        current_state = self.initial_state
-        trace = [current_state]
+        estado_actual = self.initial_state
+        trazabilidad = [estado_actual]
 
-        for symbol in input_string:
-            if symbol not in self.alphabet:
-                print(f"Error: symbol '{symbol}' not in alphabet")
+        for simbolo in cadena_entrada:
+            if simbolo not in self.alphabet:
+                print(f"Error: el símbolo '{simbolo}' no está en el alfabeto")
                 return False
-            if (current_state, symbol) not in self.transitions:
-                print(f"Error: no transition for symbol '{symbol}' from state {current_state}")
+            if (estado_actual, simbolo) not in self.transitions:
+                print(f"Error: no existe transición para el símbolo '{simbolo}' desde el estado {estado_actual}")
                 return False
-            current_state = self.transitions[(current_state, symbol)]
-            trace.append(current_state)
+            estado_actual = self.transitions[(estado_actual, simbolo)]
+            trazabilidad.append(estado_actual)
 
-        if current_state in self.final_states:
-            print(f"String accepted. Trace: {trace}")
+        if estado_actual in self.final_states:
+            print(f"Cadena aceptada. Trazabilidad: {trazabilidad}")
             return True
         else:
-            print(f"String rejected. Trace: {trace}")
+            print(f"Cadena rechazada. Trazabilidad: {trazabilidad}")
             return False
